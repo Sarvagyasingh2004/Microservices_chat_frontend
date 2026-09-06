@@ -1,8 +1,10 @@
 "use client";
+
 import Loading from "@/components/Loading";
+import AuthShell from "@/components/AuthShell";
 import { useAppData, user_service } from "@/context/AppContext";
 import axios from "axios";
-import { ArrowRight, Loader2, Mail } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { redirect, useRouter } from "next/navigation";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
@@ -10,14 +12,20 @@ import toast from "react-hot-toast";
 const LoginPage = () => {
   const [email, setEmail] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
   const router = useRouter();
 
   const { isAuth, loading: userloading } = useAppData();
 
   const handleSubmit = async (
-    e: React.FormEvent<HTMLElement>
+    e: React.FormEvent<HTMLElement>,
   ): Promise<void> => {
     e.preventDefault();
+    if (!email.trim()) {
+      setError("Enter your email address to continue.");
+      return;
+    }
+    setError("");
     setLoading(true);
     try {
       const { data } = await axios.post(`${user_service}/api/v1/login`, {
@@ -25,9 +33,14 @@ const LoginPage = () => {
       });
       toast.success(data.message);
       router.push(`/verify?email=${email}`);
-    } catch (error: any) {
-      //react-toast
-      toast.error(error.response.data.message);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ??
+        "We could not reach the sign in service. Try again.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -35,59 +48,67 @@ const LoginPage = () => {
   if (isAuth) redirect("/chat");
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-8">
-          <div className="text-center mb-8">
-            <div className="mx-auto w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center mb-6">
-              <Mail size={40} className="text-white" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-white">
-              Welcome To ChatApp
-            </h1>
-            <p className="text-gray-300 text-lg">
-              Enter your email to continue your journey
-            </p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium mb-2 text-gray-300"
-              >
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                className="w-full px-4 py-4 bg-gray-700 border border-gray-600 text rounded-lg text-white placeholder-gray-400"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-5 h-5" />
-                  Sending Otp to your mail...
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <span>Send Verification Code</span>
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-              )}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
+    <AuthShell
+      display={
+        <>
+          Sign in.
+          <br />
+          <span className="text-fog-600">No password</span>
+          <br />
+          <span className="text-fog-600">required.</span>
+        </>
+      }
+      title="Welcome back"
+      subtitle="We will email you a six digit code. Nothing to remember, nothing to reset."
+      footnote="The code expires five minutes after it is sent."
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        <label
+          htmlFor="email"
+          className="mb-2 block text-[13px] font-medium text-fog-200"
+        >
+          Email address
+        </label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError("");
+          }}
+          placeholder="you@company.com"
+          autoComplete="email"
+          autoFocus
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? "email-error" : undefined}
+          className="ring-focus w-full rounded-control border border-white/12 bg-ink-950/60 px-4 py-3.5 text-[15px] text-fog-50 outline-none transition-colors duration-200 placeholder:text-fog-600 hover:border-white/20"
+        />
+        {error && (
+          <p id="email-error" role="alert" className="mt-2 text-[13px] text-red-400">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="ring-focus mt-5 flex w-full items-center justify-center gap-2 rounded-control bg-mint-400 px-6 py-3.5 text-[15px] font-semibold text-ink-950 transition-all duration-200 hover:bg-mint-300 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+              Sending code
+            </>
+          ) : (
+            <>
+              Continue
+              <ArrowRight className="h-4 w-4" strokeWidth={2} />
+            </>
+          )}
+        </button>
+      </form>
+    </AuthShell>
   );
 };
 

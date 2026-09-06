@@ -6,32 +6,38 @@ import Cookies from "js-cookie";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Loading from "@/components/Loading";
-import { ArrowLeft, Save, User, UserCircle } from "lucide-react";
+import Avatar from "@/components/Avatar";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 const ProfilePage = () => {
   const { user, isAuth, loading, setUser } = useAppData();
   const [isEdit, setIsEdit] = useState(false);
   const [name, setName] = useState<string | undefined>("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const router = useRouter();
 
   const editHandler = () => {
     setIsEdit(!isEdit);
+    setError("");
     setName(user?.name);
   };
 
   const submitHandler = async (e: any) => {
     e.preventDefault();
+    if (!name?.trim()) {
+      setError("Your display name cannot be empty.");
+      return;
+    }
+    setError("");
+    setSaving(true);
     const token = Cookies.get("token");
     try {
       const { data } = await axios.post(
         `${user_service}/api/v1/user/update`,
         { name },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       Cookies.set("token", data.token, {
@@ -43,8 +49,13 @@ const ProfilePage = () => {
       toast.success(data.message);
       setUser(data.user);
       setIsEdit(false);
-    } catch (error: any) {
-      toast.error(error.response.data.message);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ?? "Could not save your changes.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -57,91 +68,106 @@ const ProfilePage = () => {
   if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen p-4 bg-gray-900">
-      <div className="max-w-2xl mx-auto pt-8">
-        <div className="flex items-center mb-8 gap-4">
-          <button
-            onClick={() => router.push("/chat")}
-            className="p-3 bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-300" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Profile Settings</h1>
-            <p className="text-gray-400 mt-1">
-              Manage your account information
+    <main className="min-h-dvh bg-ink-950 px-6 py-10 sm:px-10">
+      <div className="mx-auto max-w-[620px]">
+        <button
+          onClick={() => router.push("/chat")}
+          className="ring-focus -ml-2 mb-10 inline-flex items-center gap-1.5 rounded-control px-2 py-1 text-[13.5px] text-fog-400 transition-colors hover:text-fog-50"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+          Back to conversations
+        </button>
+
+        <h1 className="text-[30px] font-medium leading-tight tracking-[-0.02em] text-fog-50">
+          Profile
+        </h1>
+        <p className="mt-2 text-[14.5px] text-fog-400">
+          This is the name other people see on your messages.
+        </p>
+
+        <div className="mt-9 flex items-center gap-4 rounded-panel border border-ink-800 bg-ink-900 p-5">
+          <Avatar name={user?.name} size="lg" />
+          <div className="min-w-0">
+            <p className="truncate text-[15px] font-medium text-fog-50">
+              {user?.name || "Not set"}
             </p>
+            <p className="truncate text-[13px] text-fog-500">{user?.email}</p>
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg border border-gray-700 shadow-lg">
-          <div className="bg-gray-700 p-8 border-b border-gray-600">
-            <div className="flex items-center gap-6">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center">
-                  <UserCircle className="w-12 h-12 text-gray-300" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-800"></div>
+
+        <div className="mt-4 rounded-panel border border-ink-800 bg-ink-900 p-5">
+          {isEdit ? (
+            <form onSubmit={submitHandler} noValidate>
+              <label
+                htmlFor="display-name"
+                className="mb-2 block text-[13px] font-medium text-fog-200"
+              >
+                Display name
+              </label>
+              <input
+                id="display-name"
+                type="text"
+                value={name}
+                autoFocus
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setError("");
+                }}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "name-error" : undefined}
+                className="ring-focus w-full rounded-control border border-ink-700 bg-ink-850 px-4 py-3 text-[15px] text-fog-50 outline-none transition-colors placeholder:text-fog-600 hover:border-ink-600"
+              />
+              {error && (
+                <p id="name-error" role="alert" className="mt-2 text-[13px] text-red-400">
+                  {error}
+                </p>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="ring-focus flex items-center justify-center gap-2 rounded-control bg-mint-400 px-5 py-2.5 text-[14px] font-semibold text-ink-950 transition-all hover:bg-mint-300 active:scale-[0.985] disabled:opacity-60"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+                      Saving
+                    </>
+                  ) : (
+                    "Save changes"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={editHandler}
+                  className="ring-focus rounded-control border border-ink-700 px-5 py-2.5 text-[14px] font-medium text-fog-200 transition-colors hover:bg-ink-850"
+                >
+                  Cancel
+                </button>
               </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-white mb-1">
-                  {user?.name || "User"}
-                </h2>
-                <p className="text-gray-300 text-sm">Active Now</p>
+            </form>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[13px] font-medium text-fog-200">
+                  Display name
+                </p>
+                <p className="mt-1 truncate text-[15px] text-fog-50">
+                  {user?.name || "Not set"}
+                </p>
               </div>
+              <button
+                onClick={editHandler}
+                className="ring-focus shrink-0 rounded-control border border-ink-700 px-4 py-2 text-[13.5px] font-medium text-fog-200 transition-colors hover:bg-ink-850"
+              >
+                Edit
+              </button>
             </div>
-          </div>
-          <div className="p-8">
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-3">
-                  Display Name
-                </label>
-                {isEdit ? (
-                  <form className="space-y-4" onSubmit={submitHandler}>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400"
-                      />
-                      <User className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        type="submit"
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
-                      >
-                        <Save className="w-4 h-4" /> Save Changes
-                      </button>
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg"
-                        onClick={editHandler}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="flex items-center justify-between p-4 bg-gray-700 rounded-lg border-gray-600">
-                    <span className="text-white font-medium text-lg">
-                      {user?.name || "Not set"}
-                    </span>
-                    <button
-                      onClick={editHandler}
-                      className="flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-900 text-white font-semibold rounded-lg"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

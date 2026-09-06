@@ -339,7 +339,7 @@ const ChatApp = () => {
   if (loading) return <Loading />;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex relative overflow-hidden">
+    <div className="relative flex h-dvh overflow-hidden bg-ink-950 text-fog-50">
       <ChatSideBar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -355,7 +355,15 @@ const ChatApp = () => {
         onlineUsers={onlineUsers}
       />
 
-      <div className="flex-1 flex flex-col justify-between p-4 backdrop-blur-xl bg-white/5 border border-white/10">
+      {sidebarOpen && (
+        <button
+          aria-label="Close conversations"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-10 bg-ink-950/60 sm:hidden"
+        />
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
         <ChatHeader
           user={user}
           setSideBarOpen={setSidebarOpen}

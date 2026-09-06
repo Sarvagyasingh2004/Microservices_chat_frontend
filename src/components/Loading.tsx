@@ -2,8 +2,12 @@ import React from "react";
 
 const Loading = () => {
   return (
-    <div className="fixex inset-0 flex items-center justify-center bg-gray-900 min-h-screen">
-      <div className="h-12 w-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+    <div className="flex min-h-dvh items-center justify-center bg-ink-950">
+      <span
+        className="h-6 w-6 animate-spin rounded-full border-2 border-ink-700 border-t-mint-400"
+        role="status"
+        aria-label="Loading"
+      />
     </div>
   );
 };
