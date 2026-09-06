@@ -1,11 +1,13 @@
 "use client";
+
 import axios from "axios";
-import { ArrowRight, ChevronLeft, Loader2, Lock } from "lucide-react";
+import { ArrowRight, ChevronLeft, Loader2 } from "lucide-react";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import Cookies from "js-cookie";
 import { useAppData, user_service } from "@/context/AppContext";
 import Loading from "./Loading";
+import AuthShell from "./AuthShell";
 import toast from "react-hot-toast";
 
 const VerifyOtp = () => {
@@ -73,7 +75,8 @@ const VerifyOtp = () => {
     e.preventDefault();
     const otpString = otp.join("");
     if (otpString.length !== 6) {
-      setError("Please enter all 6 digits");
+      setError("Enter all six digits.");
+      return;
     }
     setError("");
     setLoading(true);
@@ -94,8 +97,8 @@ const VerifyOtp = () => {
       setIsAuth(true);
       fetchChats();
       fetchUsers();
-    } catch (error: any) {
-      setError(error.response.data.message);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "That code did not work.");
     } finally {
       setLoading(false);
     }
@@ -108,109 +111,116 @@ const VerifyOtp = () => {
       const { data } = await axios.post(`${user_service}/api/v1/login`, {
         email,
       });
-      alert(data.message);
+      toast.success(data.message);
       setTimer(60);
-    } catch (error: any) {
-      setError(error.response.data.message);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "Could not resend the code.");
     } finally {
       setResendLoading(false);
     }
   };
 
   if (userLoading) return <Loading />;
-
-  if (isAuth) {
-    redirect("/chat");
-  }
+  if (isAuth) redirect("/chat");
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-8">
-          <div className="text-center mb-8 relative">
-            <button
-              className="absolute top-0 left-0 p-2 text-gray-300 hover:text-white"
-              onClick={() => router.push("/login")}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <div className="mx-auto w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center mb-6">
-              <Lock size={40} className="text-white" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-white">
-              Verify Your Email
-            </h1>
-            <p className="text-gray-300 text-lg">
-              We have sent a 6-digit code to
-            </p>
-            <p className="text-blue-400 font-medium">{email}</p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-4 text-gray-300 text-center">
-                Enter your 6 digit OTP here
-              </label>
-              <div className="flex justify-center in-checked:space-x-3">
-                {otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={(el: HTMLInputElement | null) => {
-                      inputRef.current[index] = el;
-                    }}
-                    type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleInputChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    onPaste={index === 0 ? handlePaste : undefined}
-                    className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-600 rounded-lg bg-gray-700 text-white mr-2"
-                  />
-                ))}
-              </div>
-            </div>
-            {error && (
-              <div className="bg-red-900 border border-red-700 rounded-lg p-3">
-                <p className="text-red-300 text-sm text-center">{error}</p>
-              </div>
-            )}
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-5 h-5" />
-                  Verifying...
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <span>Verify</span>
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm mb-4">Didn't recieve code ?</p>
-            {timer > 0 ? (
-              <p className="text-gray-400 text-sm mb-4">
-                Resend code in {timer} seconds
-              </p>
-            ) : (
-              <button
-                className="text-blue-400 hover:text-blue-300 font-medium text-sm disabled:opacity-50"
-                disabled={resendLoading}
-                onClick={handleResendOtp}
-              >
-                {resendLoading ? "Sending..." : "Resend Code"}
-              </button>
-            )}
-          </div>
+    <AuthShell
+      display={
+        <>
+          Check
+          <br />
+          <span className="text-fog-600">your inbox.</span>
+        </>
+      }
+      title="Enter your code"
+      subtitle={
+        <>
+          We sent six digits to{" "}
+          <span className="text-fog-200">{email || "your email"}</span>.
+        </>
+      }
+      headerSlot={
+        <button
+          type="button"
+          onClick={() => router.push("/login")}
+          className="ring-focus mb-6 -ml-2 inline-flex items-center gap-1 rounded-control px-2 py-1 text-[13px] text-fog-400 transition-colors hover:text-fog-50"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+          Use a different email
+        </button>
+      }
+      footnote={
+        timer > 0 ? (
+          <>
+            You can request a new code in{" "}
+            <span className="font-mono text-fog-400">{timer}s</span>.
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResendOtp}
+            disabled={resendLoading}
+            className="ring-focus rounded-control font-medium text-mint-400 transition-colors hover:text-mint-300 disabled:opacity-60"
+          >
+            {resendLoading ? "Sending a new code" : "Send a new code"}
+          </button>
+        )
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        <label
+          htmlFor="otp-0"
+          className="mb-3 block text-[13px] font-medium text-fog-200"
+        >
+          Six digit code
+        </label>
+        <div className="flex gap-2">
+          {otp.map((digit, index) => (
+            <input
+              key={index}
+              id={`otp-${index}`}
+              ref={(el: HTMLInputElement | null) => {
+                inputRef.current[index] = el;
+              }}
+              type="text"
+              inputMode="numeric"
+              autoComplete={index === 0 ? "one-time-code" : "off"}
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleInputChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={index === 0 ? handlePaste : undefined}
+              aria-label={`Digit ${index + 1}`}
+              aria-invalid={Boolean(error)}
+              className="ring-focus h-14 w-full rounded-control border border-white/12 bg-ink-950/60 text-center font-mono text-[20px] text-fog-50 outline-none transition-colors duration-200 hover:border-white/20"
+            />
+          ))}
         </div>
-      </div>
-    </div>
+        {error && (
+          <p role="alert" className="mt-3 text-[13px] text-red-400">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="ring-focus mt-5 flex w-full items-center justify-center gap-2 rounded-control bg-mint-400 px-6 py-3.5 text-[15px] font-semibold text-ink-950 transition-all duration-200 hover:bg-mint-300 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+              Verifying
+            </>
+          ) : (
+            <>
+              Verify
+              <ArrowRight className="h-4 w-4" strokeWidth={2} />
+            </>
+          )}
+        </button>
+      </form>
+    </AuthShell>
   );
 };
 

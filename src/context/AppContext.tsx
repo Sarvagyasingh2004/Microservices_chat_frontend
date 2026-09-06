@@ -12,8 +12,10 @@ import axios from "axios";
 
 import toast, { Toaster } from "react-hot-toast";
 
-export const user_service = "http://51.21.219.172:3000";
-export const chat_service = "http://51.21.219.172:3002";
+export const user_service =
+  process.env.NEXT_PUBLIC_USER_SERVICE ?? "http://localhost:3000";
+export const chat_service =
+  process.env.NEXT_PUBLIC_CHAT_SERVICE ?? "http://localhost:3002";
 
 export interface User {
   _id: string;
@@ -85,7 +87,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     Cookies.remove("token");
     setUser(null);
     setIsAuth(false);
-    toast.success("User loggged out");
+    toast.success("User logged out");
   }
 
   const [chats, setChats] = useState<Chats[] | null>(null);
@@ -144,7 +146,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     >
       <>
         {children}
-        <Toaster />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: "#141418",
+              color: "#fafafa",
+              border: "1px solid #26262d",
+              borderRadius: "10px",
+              fontSize: "14px",
+              padding: "10px 14px",
+              boxShadow: "0 20px 50px -20px rgba(0,0,0,0.85)",
+            },
+            success: { iconTheme: { primary: "#3ddc97", secondary: "#09090b" } },
+            error: { iconTheme: { primary: "#f87171", secondary: "#09090b" } },
+          }}
+        />
       </>
     </AppContext.Provider>
   );

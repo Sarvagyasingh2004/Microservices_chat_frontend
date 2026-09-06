@@ -2,7 +2,7 @@ import { Message } from "@/app/chat/page";
 import { User } from "@/context/AppContext";
 import React, { useEffect, useMemo, useRef } from "react";
 import moment from "moment";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, MessageSquareDashed } from "lucide-react";
 
 interface ChatMessagesProps {
   selectedUser: string | null;
@@ -10,91 +10,137 @@ interface ChatMessagesProps {
   loggedInUser: User | null;
 }
 
+const dayLabel = (iso: string) => {
+  const d = moment(iso);
+  if (d.isSame(moment(), "day")) return "Today";
+  if (d.isSame(moment().subtract(1, "day"), "day")) return "Yesterday";
+  return d.format("MMMM D, YYYY");
+};
+
 const ChatMessages = ({
   selectedUser,
   messages,
   loggedInUser,
 }: ChatMessagesProps) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  //   seenfeature
+
   const uniqueMessages = useMemo(() => {
     if (!messages) return [];
     const seen = new Set();
     return messages.filter((message) => {
-      if (seen.has(message._id)) {
-        return false;
-      }
+      if (seen.has(message._id)) return false;
       seen.add(message._id);
       return true;
     });
   }, [messages]);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedUser, uniqueMessages]);
+
+  if (!selectedUser) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+        <MessageSquareDashed
+          className="h-7 w-7 text-fog-600"
+          strokeWidth={1.5}
+        />
+        <p className="mt-4 text-[15px] font-medium text-fog-200">
+          Nothing open right now
+        </p>
+        <p className="mt-1.5 max-w-[34ch] text-[13.5px] leading-relaxed text-fog-500">
+          Choose a conversation to open it, or start a new one.
+        </p>
+      </div>
+    );
+  }
+
+  if (uniqueMessages.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+        <p className="text-[15px] font-medium text-fog-200">No messages yet</p>
+        <p className="mt-1.5 text-[13.5px] text-fog-500">
+          Send the first one below.
+        </p>
+      </div>
+    );
+  }
+
+  let lastDay = "";
+
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="h-full max-h-[calc(100vh-215px)] overflow-y-auto p-2 space-y-2 custom-scroll">
-        {!selectedUser ? (
-          <p className="text-gray-400 text-center mt-20">
-            Please select user to start messaging 💬
-          </p>
-        ) : (
-          <>
-            {uniqueMessages.map((e, i) => {
-              const isSentByMe = e.sender === loggedInUser?._id;
-              const uniqueKey = `${e._id}-${i}`;
-              return (
+    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+      <div className="mx-auto flex max-w-3xl flex-col gap-1">
+        {uniqueMessages.map((e, i) => {
+          const isSentByMe = e.sender === loggedInUser?._id;
+          const prev = uniqueMessages[i - 1];
+          const grouped = prev && prev.sender === e.sender;
+          const label = dayLabel(e.createdAt);
+          const showDay = label !== lastDay;
+          lastDay = label;
+
+          return (
+            <React.Fragment key={`${e._id}-${i}`}>
+              {showDay && (
+                <div className="my-5 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-ink-800" />
+                  <span className="text-[11.5px] font-medium text-fog-600">
+                    {label}
+                  </span>
+                  <span className="h-px flex-1 bg-ink-800" />
+                </div>
+              )}
+
+              <div
+                className={`flex flex-col ${
+                  isSentByMe ? "items-end" : "items-start"
+                } ${grouped && !showDay ? "mt-0.5" : "mt-3"}`}
+              >
                 <div
-                  key={uniqueKey}
-                  className={`flex flex-col mt-2 gap-1 ${
-                    isSentByMe ? "items-end" : "items-start"
+                  className={`max-w-[min(30rem,82%)] px-3.5 py-2.5 text-[14.5px] leading-relaxed ${
+                    isSentByMe
+                      ? "rounded-panel rounded-br-[5px] border border-mint-500/25 bg-mint-500/15 text-fog-50"
+                      : "rounded-panel rounded-bl-[5px] border border-ink-700 bg-ink-850 text-fog-50"
                   }`}
                 >
-                  <div
-                    className={`rounded-lg p-3 max-w-sm text-white ${
-                      isSentByMe ? "bg-blue-600" : "bg-gray-700"
-                    }`}
-                  >
-                    {e.messageType === "image" && e.image && (
-                      <div className="relative group">
-                        <img
-                          src={e.image.url}
-                          alt="shared image"
-                          className="max-w-full h-auto rounded-lg"
-                        />
-                      </div>
-                    )}
-                    {e.text && <p className="mt-1">{e.text}</p>}
-                  </div>
-                  <div
-                    className={`flex items-center gap-1 text-xs text-gray-400 ${
-                      isSentByMe ? "pr-2 flex-row-reverse" : "pl-2"
-                    }`}
-                  >
-                    <span>{moment(e.createdAt).format("hh:mm A . MMM D")}</span>
-                    {isSentByMe && (
-                      <div className="flex items-center ml-1">
-                        {e.seen ? (
-                          <div className="flex items-center gap-1 text-blue-400">
-                            <CheckCheck className="w-3 h-3" />
-                            {e.seenAt && (
-                              <span>{moment(e.seenAt).format("hh:mm A")}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <Check className="w-3 h-3 text-gray-500" />
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  {e.messageType === "image" && e.image && (
+                    <img
+                      src={e.image.url}
+                      alt="Shared attachment"
+                      className="mb-1.5 h-auto max-w-full rounded-control"
+                    />
+                  )}
+                  {e.text && <p className="whitespace-pre-wrap">{e.text}</p>}
                 </div>
-              );
-            })}
-            <div ref={bottomRef} />
-          </>
-        )}
+
+                <div
+                  className={`mt-1 flex items-center gap-1 px-1 text-[11.5px] text-fog-600 ${
+                    isSentByMe ? "flex-row-reverse" : ""
+                  }`}
+                >
+                  <span className="font-mono">
+                    {moment(e.createdAt).format("HH:mm")}
+                  </span>
+                  {isSentByMe &&
+                    (e.seen ? (
+                      <CheckCheck
+                        className="h-3.5 w-3.5 text-mint-400"
+                        strokeWidth={2}
+                        aria-label="Seen"
+                      />
+                    ) : (
+                      <Check
+                        className="h-3.5 w-3.5"
+                        strokeWidth={2}
+                        aria-label="Sent"
+                      />
+                    ))}
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+        <div ref={bottomRef} />
       </div>
     </div>
   );
